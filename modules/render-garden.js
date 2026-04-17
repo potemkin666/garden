@@ -2,7 +2,8 @@
  * render-garden.js — Renders source plants into the garden grid.
  */
 
-import { mapSourceToVisual, STATUS_COLORS } from './state-map.js';import { generatePlantSVG } from './render-plant.js';
+import { mapSourceToVisual, STATUS_COLORS } from './state-map.js';
+import { generatePlantSVG } from './render-plant.js';
 import { escapeHtml } from './utils.js';
 
 /**
@@ -102,7 +103,7 @@ export function renderListView(container, sources, onSelect) {
 
   sources.forEach((source) => {
     const visual = mapSourceToVisual(source);
-    const statusColor = STATUS_COLORS ? STATUS_COLORS[visual.status] : '#666';
+    const statusColor = STATUS_COLORS[visual.status] || '#666';
     const tr = document.createElement('tr');
     tr.className = `diag-row status-${visual.status}`;
     tr.setAttribute('tabindex', '0');

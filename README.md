@@ -140,7 +140,7 @@ To replace mock data with a live pipeline:
    - Replace `data/mock-sources.json` with your output file, **or**
    - Edit `modules/data.js` → `loadSources()` to fetch from your API endpoint.
 
-The rest of the application will work without changes. The `normalizeSoure()` function in `data.js` handles missing or partial fields gracefully.
+The rest of the application will work without changes. The `normalizeSource()` function in `data.js` handles missing or partial fields gracefully.
 
 ---
 
