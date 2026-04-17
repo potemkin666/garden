@@ -1004,13 +1004,8 @@ code { font-family: var(--font-mono); }
   opacity: 0.5;
 }
 
-/* Ensure all content layers sit above the canvas */
-.garden-header,
-.filter-bar,
-.garden-main,
-.detail-panel,
-.panel-overlay,
-.legend-footer {
+/* Ensure content layers sit above the ambient canvas */
+.garden-main {
   position: relative;
   z-index: 1;
 }
