@@ -30,7 +30,7 @@ function blockedReasonBlock(reason) {
 /**
  * Build and return the inner HTML for the detail panel.
  */
-function buildPanelContent(source) {
+function buildPanelContent(source, isUserOwned = false) {
   const visual = mapSourceToVisual(source);
   const statusColor = STATUS_COLORS[visual.status] || '#5a5048';
   const statusLabel = STATUS_LABELS[visual.status] || visual.status;
@@ -106,6 +106,11 @@ function buildPanelContent(source) {
         <code class="source-id">${escapeHtml(source.id)}</code>
       </div>
 
+      ${isUserOwned ? `
+      <div class="detail-block remove-block">
+        <button class="remove-source-btn" id="panel-remove-btn">Remove from garden</button>
+      </div>` : ''}
+
     </div>
   `;
 }
@@ -116,9 +121,10 @@ function buildPanelContent(source) {
  * @param {HTMLElement} panelEl - The panel container element
  * @param {HTMLElement} overlayEl - The overlay element
  * @param {Function} onClose - Callback when panel closes
+ * @param {Function|null} onRemove - Callback to remove source (only for user-added)
  */
-export function openPanel(source, panelEl, overlayEl, onClose) {
-  panelEl.innerHTML = buildPanelContent(source);
+export function openPanel(source, panelEl, overlayEl, onClose, onRemove = null) {
+  panelEl.innerHTML = buildPanelContent(source, onRemove !== null);
   panelEl.classList.add('open');
   panelEl.setAttribute('aria-hidden', 'false');
   overlayEl.classList.remove('hidden');
@@ -126,6 +132,15 @@ export function openPanel(source, panelEl, overlayEl, onClose) {
   const closeBtn = panelEl.querySelector('#panel-close-btn');
   if (closeBtn) {
     closeBtn.addEventListener('click', () => closePanel(panelEl, overlayEl, onClose));
+  }
+
+  const removeBtn = panelEl.querySelector('#panel-remove-btn');
+  if (removeBtn && typeof onRemove === 'function') {
+    removeBtn.addEventListener('click', () => {
+      if (confirm(`Remove "${source.name}" from the garden?`)) {
+        onRemove(source.id);
+      }
+    });
   }
 
   panelEl.querySelector('.panel-close')?.focus();

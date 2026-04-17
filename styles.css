@@ -134,7 +134,7 @@ code { font-family: var(--font-mono); }
 .header-right {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -992,4 +992,304 @@ code { font-family: var(--font-mono); }
     transition: none !important;
   }
   .plant-card { transition: none; }
+  .ambient-canvas { display: none; }
+}
+
+/* ── Ambient particle canvas ───────────────────────────────────────────────── */
+.ambient-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Ensure all content layers sit above the canvas */
+.garden-header,
+.filter-bar,
+.garden-main,
+.detail-panel,
+.panel-overlay,
+.legend-footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header action buttons ─────────────────────────────────────────────────── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn {
+  font-size: 0.76rem;
+  color: var(--text);
+  border: 1px solid var(--accent-jade);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  background: rgba(58, 107, 50, 0.10);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.action-btn:hover {
+  background: rgba(58, 107, 50, 0.22);
+  color: #fff;
+}
+
+.action-btn-dim {
+  color: var(--text-dim);
+  border-color: var(--border-strong);
+  background: transparent;
+}
+
+.action-btn-dim:hover {
+  border-color: var(--accent-jade);
+  color: var(--text);
+  background: rgba(58, 107, 50, 0.08);
+}
+
+/* ── Add Source Modal ──────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.60);
+  z-index: 300;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.modal-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 310;
+  width: 90vw;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 40px rgba(58, 107, 50, 0.06);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.modal-close-btn {
+  font-size: 1rem;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.modal-close-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.modal-form {
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-row-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.form-label .required {
+  color: #c05040;
+  font-weight: 400;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--accent-jade);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236a6860'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 50px;
+}
+
+.form-label input[type="checkbox"] {
+  accent-color: var(--accent-jade);
+  margin-right: 4px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.form-btn {
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 7px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.form-btn-cancel {
+  color: var(--text-dim);
+  border: 1px solid var(--border-strong);
+  background: transparent;
+}
+
+.form-btn-cancel:hover {
+  color: var(--text);
+  border-color: #3a3a48;
+}
+
+.form-btn-submit {
+  color: #fff;
+  background: var(--accent-jade);
+  border: 1px solid var(--accent-jade);
+}
+
+.form-btn-submit:hover {
+  background: #4a8a42;
+}
+
+/* ── Remove source button in detail panel ──────────────────────────────────── */
+.remove-block {
+  border-color: rgba(192, 80, 64, 0.25);
+}
+
+.remove-source-btn {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: #c05040;
+  background: rgba(192, 80, 64, 0.08);
+  border: 1px solid rgba(192, 80, 64, 0.3);
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s, color 0.15s;
+}
+
+.remove-source-btn:hover {
+  background: rgba(192, 80, 64, 0.18);
+  color: #e06050;
+}
+
+/* ── Enhanced atmospheric background ───────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(58, 107, 50, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(74, 58, 106, 0.03) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 100%, rgba(30, 26, 14, 0.15) 0%, transparent 60%);
+}
+
+.garden-main {
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(14, 18, 8, 0.5) 0%, transparent 70%);
+}
+
+/* ── Vignette overlay ──────────────────────────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(0, 0, 0, 0.35) 100%);
+}
+
+/* ── Mobile responsive for modal ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .header-actions { display: none; }
+
+  .modal-container {
+    width: 95vw;
+    max-height: 90vh;
+  }
+
+  .form-row-pair {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .header-actions .action-btn-dim { display: none; }
 }

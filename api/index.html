@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Signal Garden — Healthy Sources API</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: #08090c;
+        color: #c4bfac;
+        font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        padding: 24px;
+      }
+      .header {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #1e1e24;
+        padding-bottom: 16px;
+      }
+      h1 {
+        font-size: 16px;
+        color: #3a7a32;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+      }
+      .subtitle {
+        font-size: 11px;
+        color: #4a4840;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 4px;
+      }
+      .meta {
+        margin: 12px 0 16px;
+        font-size: 12px;
+        color: #7a7668;
+      }
+      .meta span { color: #6ab030; }
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      button {
+        font-family: inherit;
+        font-size: 12px;
+        color: #c4bfac;
+        background: #0d0e12;
+        border: 1px solid #2a2a34;
+        border-radius: 4px;
+        padding: 6px 14px;
+        cursor: pointer;
+        transition: border-color 0.15s, color 0.15s;
+      }
+      button:hover { border-color: #3a7a32; color: #fff; }
+      #json-output {
+        background: #0d0e12;
+        border: 1px solid #1e1e24;
+        border-radius: 6px;
+        padding: 16px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 70vh;
+        overflow-y: auto;
+        font-size: 12px;
+        color: #8a8674;
+      }
+      .error { color: #c05040; }
+      .copy-msg {
+        font-size: 11px;
+        color: #6ab030;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .copy-msg.show { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>᳃ Signal Garden — Healthy Sources</h1>
+      <div class="subtitle">Read-only feed endpoint for external consumers</div>
+    </div>
+    <div class="meta">
+      Showing <span id="count">0</span> healthy source(s) &middot;
+      Last loaded: <span id="timestamp">—</span>
+    </div>
+    <div class="controls">
+      <button id="btn-copy">Copy JSON</button>
+      <button id="btn-download">Download healthy.json</button>
+      <button id="btn-reload">Reload</button>
+      <span class="copy-msg" id="copy-msg">Copied!</span>
+    </div>
+    <pre id="json-output">Loading…</pre>
+
+    <script type="module">
+      const DATA_URL = '../data/sources.json';
+      const output = document.getElementById('json-output');
+      const countEl = document.getElementById('count');
+      const tsEl = document.getElementById('timestamp');
+      const copyMsg = document.getElementById('copy-msg');
+
+      let healthyJSON = '[]';
+
+      async function load() {
+        try {
+          const res = await fetch(DATA_URL);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const sources = await res.json();
+
+          // Filter to healthy and flowering (healthy + active incidents)
+          const healthy = sources.filter((s) => {
+            if (s.quarantined) return false;
+            return s.status === 'healthy';
+          });
+
+          healthyJSON = JSON.stringify(healthy, null, 2);
+          output.textContent = healthyJSON;
+          countEl.textContent = healthy.length;
+          tsEl.textContent = new Date().toISOString();
+        } catch (err) {
+          output.innerHTML = `<span class="error">Failed to load: ${err.message}</span>`;
+        }
+      }
+
+      document.getElementById('btn-copy').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(healthyJSON);
+          copyMsg.classList.add('show');
+          setTimeout(() => copyMsg.classList.remove('show'), 1500);
+        } catch {
+          // Fallback
+          const ta = document.createElement('textarea');
+          ta.value = healthyJSON;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+          copyMsg.classList.add('show');
+          setTimeout(() => copyMsg.classList.remove('show'), 1500);
+        }
+      });
+
+      document.getElementById('btn-download').addEventListener('click', () => {
+        const blob = new Blob([healthyJSON], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'healthy-sources.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('btn-reload').addEventListener('click', load);
+
+      load();
+    </script>
+  </body>
+</html>

@@ -10,6 +10,9 @@
   </head>
   <body>
 
+    <!-- ── Ambient particle layer ──────────────────────────────────────────── -->
+    <canvas id="ambient-canvas" class="ambient-canvas" aria-hidden="true"></canvas>
+
     <!-- ── Header ──────────────────────────────────────────────────────────── -->
     <header class="garden-header">
       <div class="header-left">
@@ -21,6 +24,11 @@
       </div>
       <div class="header-right">
         <div class="header-summary" id="status-summary" aria-live="polite"></div>
+        <div class="header-actions">
+          <button class="action-btn" id="add-source-btn" title="Add new source">+ Add Source</button>
+          <button class="action-btn action-btn-dim" id="export-btn" title="Export all sources as JSON">↓ Export</button>
+          <button class="action-btn action-btn-dim" id="export-healthy-btn" title="Export healthy sources for brialert">↓ Healthy</button>
+        </div>
         <button class="view-toggle-btn" id="view-toggle" aria-pressed="false">⊞ List view</button>
       </div>
     </header>

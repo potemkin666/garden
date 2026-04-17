@@ -1,13 +1,13 @@
 /**
- * data.js — Data loading and parsing for Signal Garden.
- * Loads local JSON fixtures; can be adapted to accept live feed data later.
+ * data.js — Data loading, persistence, and normalization for Signal Garden.
+ * Loads base JSON fixtures + merges user-added sources from localStorage.
  */
 
-const DATA_PATH = './data/mock-sources.json';
+const DATA_PATH = './data/sources.json';
+const STORAGE_KEY = 'signal-garden-user-sources';
 
 /**
- * Fetch and return source data from the JSON fixture.
- * Replace this function's implementation to connect a live pipeline.
+ * Fetch base source data and merge with user-added sources from localStorage.
  * @returns {Promise<Array>} Array of source objects
  */
 export async function loadSources() {
@@ -19,7 +19,103 @@ export async function loadSources() {
   if (!Array.isArray(data)) {
     throw new Error('Source data must be a JSON array.');
   }
-  return data.map(normalizeSource);
+  const base = data.map(normalizeSource);
+  const user = getUserSources();
+  return mergeSources(base, user);
+}
+
+/**
+ * Get user-added sources from localStorage.
+ * @returns {Array}
+ */
+export function getUserSources() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(normalizeSource) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Save a new source to localStorage.
+ * @param {Object} source - Source data object
+ */
+export function addUserSource(source) {
+  const sources = getUserSources();
+  const normalized = normalizeSource(source);
+  // Prevent duplicate IDs
+  const existing = sources.findIndex((s) => s.id === normalized.id);
+  if (existing >= 0) {
+    sources[existing] = normalized;
+  } else {
+    sources.push(normalized);
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sources));
+  return normalized;
+}
+
+/**
+ * Remove a user-added source by ID.
+ * @param {string} id
+ */
+export function removeUserSource(id) {
+  const sources = getUserSources().filter((s) => s.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sources));
+}
+
+/**
+ * Export all sources (base + user) as a downloadable JSON blob.
+ * @param {Array} allSources
+ */
+export function exportSourcesJSON(allSources) {
+  const json = JSON.stringify(allSources, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sources.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Export only healthy/flowering sources as JSON — for consumption by external repos.
+ * @param {Array} allSources
+ */
+export function exportHealthyJSON(allSources) {
+  const healthy = allSources.filter(
+    (s) => s.status === 'healthy' || (s.status === 'healthy' && s.incidentCountRecent > 0)
+  );
+  const json = JSON.stringify(healthy, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'healthy-sources.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Check if a source ID belongs to a user-added source.
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function isUserSource(id) {
+  return getUserSources().some((s) => s.id === id);
+}
+
+/**
+ * Merge base and user sources. User sources override base sources with same ID.
+ */
+function mergeSources(base, user) {
+  const map = new Map();
+  base.forEach((s) => map.set(s.id, s));
+  user.forEach((s) => map.set(s.id, s));
+  return Array.from(map.values());
 }
 
 /**
