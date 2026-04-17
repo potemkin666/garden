@@ -66,7 +66,7 @@ Signal Garden publishes source data that [brialert](https://github.com/potemkin6
 From brialert or any consumer, fetch and filter:
 
 ```js
-const GARDEN_URL = 'https://<user>.github.io/garden/data/sources.json';
+const GARDEN_URL = 'https://potemkin666.github.io/garden/data/sources.json';
 
 async function getHealthySources() {
   const res = await fetch(GARDEN_URL);
@@ -77,12 +77,12 @@ async function getHealthySources() {
 
 ### API page
 
-Visit `https://<user>.github.io/garden/api/` for a filtered view of healthy sources with copy/download buttons. See [`api/README.md`](api/README.md) for full integration docs.
+Visit `https://potemkin666.github.io/garden/api/` for a filtered view of healthy sources with copy/download buttons. See [`api/README.md`](api/README.md) for full integration docs.
 
 ### From raw GitHub (no Pages required)
 
 ```
-https://raw.githubusercontent.com/<user>/garden/main/data/sources.json
+https://raw.githubusercontent.com/potemkin666/garden/main/data/sources.json
 ```
 
 ---
@@ -140,8 +140,13 @@ Each source object (in `data/sources.json`) supports:
 ```
 garden/
 ├── index.html              # App shell
+├── 404.html                # Custom 404 page for GitHub Pages
 ├── styles.css              # Dark gothic botanical stylesheet
 ├── app.js                  # Entry point — wires all modules
+├── .nojekyll               # Disables Jekyll on GitHub Pages
+├── .github/
+│   └── workflows/
+│       └── pages.yml       # GitHub Actions deploy workflow
 ├── data/
 │   └── sources.json        # Base source data (20 sources)
 ├── api/
@@ -182,12 +187,18 @@ Then open `http://localhost:8080` in a browser.
 
 ## GitHub Pages Deployment
 
+A GitHub Actions workflow (`.github/workflows/pages.yml`) is included and will deploy automatically on every push to `main`.
+
+**One-time setup:**
+
 1. Push the repository to GitHub.
 2. Go to **Settings → Pages**.
-3. Set Source to **Deploy from a branch**, select `main`, folder `/` (root).
-4. Save. The site will be live at `https://<user>.github.io/<repo>/` within a minute.
+3. Under **Source**, select **GitHub Actions**.
+4. That's it — the next push to `main` triggers a deploy.
 
-No build process is required. All assets are static.
+The site will be live at `https://potemkin666.github.io/garden/` within a minute.
+
+No build process is required. All assets are static. A `.nojekyll` file is included to prevent GitHub Pages from running Jekyll processing.
 
 ---
 

@@ -7,7 +7,7 @@ This directory provides a simple read-only endpoint for external consumers (like
 The garden publishes all source data at:
 
 ```
-https://<user>.github.io/garden/data/sources.json
+https://potemkin666.github.io/garden/data/sources.json
 ```
 
 The `api/index.html` page loads this data, filters to only **healthy** sources (excluding quarantined), and displays the result as copyable/downloadable JSON.
@@ -19,7 +19,7 @@ The `api/index.html` page loads this data, filters to only **healthy** sources (
 From brialert or any consuming repo, fetch the full sources list and filter client-side:
 
 ```js
-const GARDEN_URL = 'https://<user>.github.io/garden/data/sources.json';
+const GARDEN_URL = 'https://potemkin666.github.io/garden/data/sources.json';
 
 async function getHealthySources() {
   const res = await fetch(GARDEN_URL);
@@ -30,7 +30,7 @@ async function getHealthySources() {
 
 ### Option 2: Use the API page
 
-Visit `https://<user>.github.io/garden/api/` in a browser to:
+Visit `https://potemkin666.github.io/garden/api/` in a browser to:
 - View the filtered healthy sources as JSON
 - Copy to clipboard
 - Download as `healthy-sources.json`
@@ -40,7 +40,7 @@ Visit `https://<user>.github.io/garden/api/` in a browser to:
 If the repo is public, you can fetch the raw JSON directly:
 
 ```
-https://raw.githubusercontent.com/<user>/garden/main/data/sources.json
+https://raw.githubusercontent.com/potemkin666/garden/main/data/sources.json
 ```
 
 ## Source Data Model
