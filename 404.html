@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#08090c" />
+    <title>404 — Signal Garden</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: #08090c;
+        color: #c4bfac;
+        font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 24px;
+      }
+      .sigil {
+        font-size: 48px;
+        color: #3a6b32;
+        opacity: 0.7;
+        margin-bottom: 16px;
+        user-select: none;
+      }
+      h1 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+      }
+      p {
+        font-size: 0.88rem;
+        color: #7a7668;
+        max-width: 380px;
+        line-height: 1.55;
+        margin-bottom: 24px;
+      }
+      a {
+        color: #3a7a32;
+        text-decoration: none;
+        font-size: 0.84rem;
+        border: 1px solid #2a2a34;
+        border-radius: 6px;
+        padding: 8px 18px;
+        transition: border-color 0.2s, color 0.2s;
+      }
+      a:hover {
+        border-color: #3a7a32;
+        color: #6ab030;
+      }
+      .code {
+        font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+        font-size: 4rem;
+        color: #1e1e24;
+        letter-spacing: 0.1em;
+        position: absolute;
+        bottom: 24px;
+        right: 32px;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sigil" aria-hidden="true">᳃</div>
+    <h1>Nothing grows here</h1>
+    <p>This path doesn't lead anywhere in the garden. The soil is bare.</p>
+    <a href="./">Return to the garden</a>
+    <span class="code" aria-hidden="true">404</span>
+  </body>
+</html>
