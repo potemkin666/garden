@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#08090c" />
+    <meta name="description" content="Signal Garden — a visual source-health dashboard where live feeds grow as plants." />
+    <title>Signal Garden</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <header class="garden-header">
+      <div class="header-left">
+        <span class="header-sigil" aria-hidden="true">᳃</span>
+        <div class="header-title-group">
+          <h1 class="header-title">Signal Garden</h1>
+          <span class="header-subtitle">source health observatory</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-summary" id="status-summary" aria-live="polite"></div>
+        <button class="view-toggle-btn" id="view-toggle" aria-pressed="false">⊞ List view</button>
+      </div>
+    </header>
+
+    <!-- ── Filter bar ───────────────────────────────────────────────────────── -->
+    <nav class="filter-bar" id="filter-bar" aria-label="Filters">
+      <!-- Rendered by filters.js -->
+    </nav>
+
+    <!-- ── Garden main ─────────────────────────────────────────────────────── -->
+    <main class="garden-main" id="garden-main">
+      <div id="loading" class="loading-state hidden" aria-live="polite">
+        <span class="loading-dot"></span>
+        <span class="loading-dot"></span>
+        <span class="loading-dot"></span>
+      </div>
+      <p id="error-message" class="error-message hidden" role="alert"></p>
+
+      <!-- Garden grid view -->
+      <div class="garden-grid" id="garden-grid" role="list" aria-label="Source garden"></div>
+
+      <!-- Diagnostic list view -->
+      <div class="list-view hidden" id="list-view" role="region" aria-label="Source list"></div>
+    </main>
+
+    <!-- ── Detail panel ─────────────────────────────────────────────────────── -->
+    <aside class="detail-panel" id="detail-panel" aria-label="Source detail" aria-hidden="true">
+      <!-- Content rendered by detail-panel.js -->
+    </aside>
+    <div class="panel-overlay hidden" id="panel-overlay" aria-hidden="true"></div>
+
+    <!-- ── Legend bar ───────────────────────────────────────────────────────── -->
+    <footer class="legend-footer">
+      <div class="legend-bar" id="legend-bar" role="list" aria-label="Status legend">
+        <!-- Rendered by app.js -->
+      </div>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
