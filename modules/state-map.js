@@ -6,7 +6,7 @@
 import { clamp, lerp } from './utils.js';
 
 /**
- * @param {Object} source - Source data object from mock-sources.json
+ * @param {Object} source - Source data object from sources.json
  * @returns {Object} visual - Visual property bag consumed by render-plant.js
  */
 export function mapSourceToVisual(source) {
