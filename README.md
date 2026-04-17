@@ -31,6 +31,62 @@ The garden loads immediately with 20 mock sources covering all visual states:
 
 ---
 
+## Adding Sources
+
+### Via the UI
+
+Click **+ Add Source** in the header to open the source form. Fill in:
+- **Name** (required)
+- **Category** (e.g. news, finance, tech)
+- **Status** (healthy, stale, failing, blocked, dead, recovering, quarantined)
+- **Freshness / Reliability scores** (0–100)
+- **Failure count, incident details, notes**
+
+User-added sources are stored in the browser's `localStorage` and merged with the base `data/sources.json` on every load. They persist across page reloads.
+
+To remove a user-added source, click it → open the detail panel → click **Remove from garden**.
+
+### Via JSON
+
+Edit `data/sources.json` directly. Each source object follows the data model below.
+
+### Exporting
+
+- **↓ Export** — downloads all sources (base + user-added) as `sources.json`
+- **↓ Healthy** — downloads only healthy sources as `healthy-sources.json`
+
+---
+
+## brialert Integration
+
+Signal Garden publishes source data that [brialert](https://github.com/potemkin666/brialert) can consume to pick out only healthy sources for its news feed.
+
+### Fetching healthy sources
+
+From brialert or any consumer, fetch and filter:
+
+```js
+const GARDEN_URL = 'https://<user>.github.io/garden/data/sources.json';
+
+async function getHealthySources() {
+  const res = await fetch(GARDEN_URL);
+  const sources = await res.json();
+  return sources.filter(s => s.status === 'healthy' && !s.quarantined);
+}
+```
+
+### API page
+
+Visit `https://<user>.github.io/garden/api/` for a filtered view of healthy sources with copy/download buttons. See [`api/README.md`](api/README.md) for full integration docs.
+
+### From raw GitHub (no Pages required)
+
+```
+https://raw.githubusercontent.com/<user>/garden/main/data/sources.json
+```
+
+---
+
 ## Visual Metaphor System
 
 Each source metric maps to a visual property:
@@ -52,7 +108,7 @@ The mapping lives entirely in `modules/state-map.js` — one place to tune all v
 
 ## Data Model
 
-Each source object (in `data/mock-sources.json`) supports:
+Each source object (in `data/sources.json`) supports:
 
 ```json
 {
@@ -82,18 +138,22 @@ Each source object (in `data/mock-sources.json`) supports:
 ## File Structure
 
 ```
-signal-garden/
+garden/
 ├── index.html              # App shell
 ├── styles.css              # Dark gothic botanical stylesheet
 ├── app.js                  # Entry point — wires all modules
 ├── data/
-│   └── mock-sources.json   # Fixture data (20 sources)
+│   └── sources.json        # Base source data (20 sources)
+├── api/
+│   ├── index.html          # Healthy sources viewer for external consumers
+│   └── README.md           # brialert integration docs
 └── modules/
-    ├── data.js             # Data loading and normalization
+    ├── data.js             # Data loading, localStorage merge, export
     ├── state-map.js        # Status → visual property mapping
     ├── render-plant.js     # SVG plant generator (parametric)
     ├── render-garden.js    # Garden grid and list view rendering
     ├── detail-panel.js     # Source detail side panel
+    ├── add-source.js       # Add/edit source modal form
     ├── filters.js          # Filter, sort, and search logic
     └── utils.js            # Shared helpers
 ```
@@ -137,7 +197,7 @@ To replace mock data with a live pipeline:
 
 1. Generate a JSON array conforming to the data model above from your pipeline.
 2. Either:
-   - Replace `data/mock-sources.json` with your output file, **or**
+   - Replace `data/sources.json` with your output file, **or**
    - Edit `modules/data.js` → `loadSources()` to fetch from your API endpoint.
 
 The rest of the application will work without changes. The `normalizeSource()` function in `data.js` handles missing or partial fields gracefully.
@@ -146,6 +206,10 @@ The rest of the application will work without changes. The `normalizeSource()` f
 
 ## Roadmap
 
+- [x] Add Source UI with localStorage persistence
+- [x] Export all / export healthy sources as JSON
+- [x] API endpoint for brialert to consume healthy sources
+- [x] Ambient particle effects and atmospheric background
 - [ ] Time slider — watch the garden degrade and recover across hours/days
 - [ ] Storm mode — widespread failures affect the whole garden environment
 - [ ] Garden beds — cluster plants by source category
