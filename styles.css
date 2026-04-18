@@ -1048,6 +1048,7 @@ a:focus-visible,
   .header-subtitle { display: none; }
 
   .header-summary { display: none; }
+  .refresh-indicator { display: none; }
 
   .filter-bar {
     padding: 7px 14px;

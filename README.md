@@ -147,24 +147,35 @@ garden/
 ├── 404.html                # Custom 404 page for GitHub Pages
 ├── styles.css              # Dark gothic botanical stylesheet
 ├── app.js                  # Entry point — wires all modules
+├── sw.js                   # Service worker for offline / PWA support
+├── manifest.json           # PWA web app manifest
+├── package.json            # Dev dependencies (Vitest)
+├── vitest.config.js        # Vitest configuration
 ├── .nojekyll               # Disables Jekyll on GitHub Pages
 ├── .github/
 │   └── workflows/
-│       └── pages.yml       # GitHub Actions deploy workflow
+│       └── pages.yml       # GitHub Actions: validate + deploy workflow
 ├── data/
 │   └── sources.json        # Local fallback data (used when AlbertAlert is unreachable)
 ├── api/
 │   ├── index.html          # Healthy sources viewer for external consumers
 │   └── README.md           # AlbertAlert integration docs
-└── modules/
-    ├── data.js             # Data loading (AlbertAlert fetch + localStorage merge)
-    ├── state-map.js        # Status → visual property mapping
-    ├── render-plant.js     # SVG plant generator (parametric)
-    ├── render-garden.js    # Garden grid and list view rendering
-    ├── detail-panel.js     # Source detail side panel
-    ├── add-source.js       # Add/edit source modal form
-    ├── filters.js          # Filter, sort, and search logic
-    └── utils.js            # Shared helpers
+├── modules/
+│   ├── data.js             # Data loading (AlbertAlert fetch + localStorage merge)
+│   ├── state-map.js        # Status → visual property mapping
+│   ├── render-plant.js     # SVG plant generator (parametric)
+│   ├── render-garden.js    # Garden grid, beds, and list view rendering
+│   ├── detail-panel.js     # Source detail side panel with sparklines
+│   ├── add-source.js       # Add/edit source modal form
+│   ├── filters.js          # Filter, sort, and search logic
+│   ├── sparkline.js        # Score history storage and SVG sparkline renderer
+│   └── utils.js            # Shared helpers
+└── tests/
+    ├── utils.test.js       # Utils unit tests
+    ├── data.test.js        # Data derivation logic tests
+    ├── state-map.test.js   # State-map visual mapping tests
+    ├── filters.test.js     # Filter/sort logic tests
+    └── sparkline.test.js   # Sparkline renderer tests
 ```
 
 ---
@@ -224,15 +235,21 @@ The `normalizeSource()` function in `data.js` handles missing or partial fields 
 - [x] Export all / export healthy sources as JSON
 - [x] AlbertAlert integration — live source-health data from 550+ sources
 - [x] Ambient particle effects and atmospheric background
+- [x] Auto-refresh with visible countdown timer (5 min cycle)
+- [x] Source history sparklines in the detail panel
+- [x] Garden beds — cluster plants by source category (third view mode)
+- [x] Full accessibility pass (skip link, focus-visible, reduced motion, ARIA meters)
+- [x] Offline / service worker + PWA manifest
+- [x] Virtualized rendering with IntersectionObserver for large data sets
+- [x] Deep-linking — filters, view mode, and selected source synced to URL params
+- [x] Tests — Vitest suite covering utils, data derivation, state-map, filters, sparklines
+- [x] Error categorization and remediation hints in the detail panel
+- [x] CI validation — tests, JSON schema check, HTML lint in deploy workflow
 - [ ] Time slider — watch the garden degrade and recover across hours/days
 - [ ] Storm mode — widespread failures affect the whole garden environment
-- [ ] Garden beds — cluster plants by source category
 - [ ] Ambient effects — drifting spores, fog, moonlight changes
-- [ ] Trend sparklines in the detail panel
 - [ ] Watchlist / pinned plants
-- [ ] Source history timeline
 - [ ] JSON snapshot export/import
-- [ ] Full accessibility pass (contrast, reduced motion, keyboard nav)
 - [ ] Live WebSocket feed adapter
 
 ---
