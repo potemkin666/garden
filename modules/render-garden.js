@@ -21,7 +21,7 @@ function buildPlantCard(source) {
   card.dataset.category = source.category;
   card.setAttribute('aria-label', `${source.name} — ${visual.status}`);
   card.setAttribute('tabindex', '0');
-  card.setAttribute('role', 'button');
+  card.setAttribute('role', 'listitem');
 
   card.innerHTML = `
     <div class="plant-visual" aria-hidden="true">${svg}</div>
@@ -54,9 +54,12 @@ export function renderGarden(container, sources, onSelect) {
   }
 
   const fragment = document.createDocumentFragment();
+  const cards = [];
 
-  sources.forEach((source) => {
+  sources.forEach((source, idx) => {
     const card = buildPlantCard(source);
+    // Roving tabindex: only the first card is in tab order
+    card.setAttribute('tabindex', idx === 0 ? '0' : '-1');
     card.addEventListener('click', () => onSelect(source));
     card.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -64,10 +67,40 @@ export function renderGarden(container, sources, onSelect) {
         onSelect(source);
       }
     });
+    cards.push(card);
     fragment.appendChild(card);
   });
 
   container.appendChild(fragment);
+
+  // Arrow-key navigation across the grid
+  container.addEventListener('keydown', (e) => {
+    if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+    const focused = document.activeElement;
+    const idx = cards.indexOf(focused);
+    if (idx === -1) return;
+
+    e.preventDefault();
+    let next = idx;
+
+    // Estimate columns from grid layout
+    const cols = Math.max(1, Math.round(container.offsetWidth / (cards[0]?.offsetWidth || 1)));
+
+    switch (e.key) {
+      case 'ArrowRight': next = Math.min(idx + 1, cards.length - 1); break;
+      case 'ArrowLeft':  next = Math.max(idx - 1, 0); break;
+      case 'ArrowDown':  next = Math.min(idx + cols, cards.length - 1); break;
+      case 'ArrowUp':    next = Math.max(idx - cols, 0); break;
+      case 'Home':       next = 0; break;
+      case 'End':        next = cards.length - 1; break;
+    }
+
+    if (next !== idx) {
+      cards[idx].setAttribute('tabindex', '-1');
+      cards[next].setAttribute('tabindex', '0');
+      cards[next].focus();
+    }
+  });
 }
 
 /**

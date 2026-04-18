@@ -1010,6 +1010,9 @@ code { font-family: var(--font-mono); }
   z-index: 1;
 }
 
+/* ── Mobile menu button (hidden on desktop, shown on mobile) ───────────────── */
+.mobile-menu-btn { display: none; }
+
 /* ── Header action buttons ─────────────────────────────────────────────────── */
 .header-actions {
   display: flex;
@@ -1272,7 +1275,45 @@ body::after {
 
 /* ── Mobile responsive for modal ───────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .header-actions { display: none; }
+  /* Hide desktop inline actions, show mobile menu toggle */
+  .header-actions {
+    display: none;
+    position: absolute;
+    top: calc(var(--header-h) - 4px);
+    right: 14px;
+    flex-direction: column;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 6px;
+    gap: 4px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+    z-index: 110;
+  }
+
+  .header-actions.mobile-open {
+    display: flex;
+  }
+
+  .mobile-menu-btn.hidden { display: none; }
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: var(--text-dim);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    width: 32px;
+    height: 32px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .mobile-menu-btn:hover {
+    color: var(--text);
+    border-color: var(--accent-jade);
+  }
 
   .modal-container {
     width: 95vw;

@@ -107,6 +107,41 @@ function setupAddSource() {
   });
 }
 
+// ─── Mobile actions menu ────────────────────────────────────────────────────
+
+function setupMobileMenu() {
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const headerActions = document.getElementById('header-actions');
+  if (!mobileMenuBtn || !headerActions) return;
+
+  // Show the ⋮ button on mobile via media query match
+  const mq = window.matchMedia('(max-width: 640px)');
+  function updateVisibility() {
+    if (mq.matches) {
+      mobileMenuBtn.classList.remove('hidden');
+    } else {
+      mobileMenuBtn.classList.add('hidden');
+      headerActions.classList.remove('mobile-open');
+    }
+  }
+  mq.addEventListener('change', updateVisibility);
+  updateVisibility();
+
+  mobileMenuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = headerActions.classList.toggle('mobile-open');
+    mobileMenuBtn.setAttribute('aria-expanded', open);
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!headerActions.contains(e.target) && e.target !== mobileMenuBtn) {
+      headerActions.classList.remove('mobile-open');
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
 // ─── Export ──────────────────────────────────────────────────────────────────────
 
 function setupExport() {
@@ -152,6 +187,8 @@ function initAmbientParticles() {
   let w, h;
   const particles = [];
   const PARTICLE_COUNT = 40;
+  let rafId = null;
+  let running = false;
 
   function resize() {
     w = canvas.width = window.innerWidth;
@@ -194,7 +231,22 @@ function initAmbientParticles() {
       ctx.fillStyle = `hsla(${p.hue}, 40%, 50%, ${p.opacity})`;
       ctx.fill();
     }
-    requestAnimationFrame(draw);
+    rafId = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    if (running) return;
+    running = true;
+    draw();
+  }
+
+  function stop() {
+    if (!running) return;
+    running = false;
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
   }
 
   // Respect reduced motion
@@ -202,7 +254,17 @@ function initAmbientParticles() {
 
   init();
   window.addEventListener('resize', resize);
-  draw();
+
+  // Pause animation when tab is hidden to save resources
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stop();
+    } else {
+      start();
+    }
+  });
+
+  start();
 }
 
 // ─── Keyboard / overlay close ───────────────────────────────────────────────────
@@ -236,6 +298,7 @@ async function init() {
     setupViewToggle();
     setupAddSource();
     setupExport();
+    setupMobileMenu();
     renderLegend();
     setupGlobalListeners();
     initAmbientParticles();
