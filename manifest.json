@@ -1,0 +1,16 @@
+{
+  "name": "Signal Garden",
+  "short_name": "Garden",
+  "description": "A visual source-health dashboard where live feeds grow as plants.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#08090c",
+  "theme_color": "#08090c",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🌿</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

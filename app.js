@@ -1,14 +1,25 @@
 /**
  * app.js — Signal Garden entry point.
  * Wires data, filters, rendering, and panel modules together.
+ *
+ * Improvements:
+ *  1. Auto-refresh with visible countdown timer
+ *  2. Sparkline history recording
+ *  3. Garden beds (grouping by category) as a third view mode
+ *  7. Deep-linking / URL-based state
  */
 
 import { loadSources, addUserSource, removeUserSource, isUserSource, exportSourcesJSON, exportHealthyJSON } from './modules/data.js';
 import { applyFilters, applySorting, countByStatus, renderFilterBar } from './modules/filters.js';
-import { renderGarden, renderListView } from './modules/render-garden.js';
+import { renderGarden, renderListView, renderGardenBeds } from './modules/render-garden.js';
 import { openPanel, closePanel } from './modules/detail-panel.js';
 import { openAddSourceModal } from './modules/add-source.js';
 import { STATUS_COLORS, STATUS_LEGEND, clearVisualCache } from './modules/state-map.js';
+import { recordScoreSnapshot } from './modules/sparkline.js';
+
+// ─── Constants ──────────────────────────────────────────────────────────────────
+
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // ─── State ──────────────────────────────────────────────────────────────────────
 
@@ -19,8 +30,11 @@ let activeFilters = {
   sort: 'risk',
   search: '',
 };
-let viewMode = 'garden'; // 'garden' | 'list'
+let viewMode = 'garden'; // 'garden' | 'list' | 'beds'
 let panelSource = null;
+let refreshTimerId = null;
+let refreshCountdownId = null;
+let lastRefreshTime = null;
 
 // ─── DOM refs ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +51,59 @@ const errorEl = document.getElementById('error-message');
 const addSourceBtn = document.getElementById('add-source-btn');
 const exportBtn = document.getElementById('export-btn');
 const exportHealthyBtn = document.getElementById('export-healthy-btn');
+const refreshText = document.getElementById('refresh-text');
+
+// ─── URL State (Deep-linking) ───────────────────────────────────────────────────
+
+function readURLState() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('status')) activeFilters.status = params.get('status');
+  if (params.has('category')) activeFilters.category = params.get('category');
+  if (params.has('sort')) activeFilters.sort = params.get('sort');
+  if (params.has('search')) activeFilters.search = params.get('search');
+  if (params.has('view')) viewMode = params.get('view');
+}
+
+function writeURLState() {
+  const params = new URLSearchParams();
+  if (activeFilters.status !== 'all') params.set('status', activeFilters.status);
+  if (activeFilters.category !== 'all') params.set('category', activeFilters.category);
+  if (activeFilters.sort !== 'risk') params.set('sort', activeFilters.sort);
+  if (activeFilters.search) params.set('search', activeFilters.search);
+  if (viewMode !== 'garden') params.set('view', viewMode);
+  if (panelSource) params.set('source', panelSource.id);
+
+  const qs = params.toString();
+  const newURL = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+  window.history.replaceState(null, '', newURL);
+}
+
+// ─── Auto-refresh ───────────────────────────────────────────────────────────────
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  lastRefreshTime = Date.now();
+  updateCountdown();
+  refreshCountdownId = setInterval(updateCountdown, 1000);
+  refreshTimerId = setInterval(async () => {
+    lastRefreshTime = Date.now();
+    await reloadSources();
+  }, REFRESH_INTERVAL_MS);
+}
+
+function stopAutoRefresh() {
+  if (refreshTimerId) { clearInterval(refreshTimerId); refreshTimerId = null; }
+  if (refreshCountdownId) { clearInterval(refreshCountdownId); refreshCountdownId = null; }
+}
+
+function updateCountdown() {
+  if (!refreshText || !lastRefreshTime) return;
+  const elapsed = Date.now() - lastRefreshTime;
+  const remaining = Math.max(0, REFRESH_INTERVAL_MS - elapsed);
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  refreshText.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 // ─── Rendering ──────────────────────────────────────────────────────────────────
 
@@ -48,19 +115,25 @@ function refresh() {
   renderFilterBar(filterBarEl, allSources, activeFilters, (newFilters) => {
     activeFilters = newFilters;
     refresh();
+    writeURLState();
   });
 
-  if (viewMode === 'garden') {
+  if (viewMode === 'beds') {
     gardenGrid.classList.remove('hidden');
     listViewEl.classList.add('hidden');
-    renderGarden(gardenGrid, sorted, selectSource);
-  } else {
+    renderGardenBeds(gardenGrid, sorted, selectSource);
+  } else if (viewMode === 'list') {
     gardenGrid.classList.add('hidden');
     listViewEl.classList.remove('hidden');
     renderListView(listViewEl, sorted, selectSource);
+  } else {
+    gardenGrid.classList.remove('hidden');
+    listViewEl.classList.add('hidden');
+    renderGarden(gardenGrid, sorted, selectSource);
   }
 
   updateSummary(filtered);
+  writeURLState();
 }
 
 function updateSummary(filtered) {
@@ -80,12 +153,15 @@ function selectSource(source) {
   const userOwned = isUserSource(source.id);
   openPanel(source, detailPanel, panelOverlay, () => {
     panelSource = null;
+    writeURLState();
   }, userOwned ? handleRemoveSource : null);
+  writeURLState();
 }
 
 function handleClosePanel() {
   closePanel(detailPanel, panelOverlay, () => {
     panelSource = null;
+    writeURLState();
   });
 }
 
@@ -114,7 +190,6 @@ function setupMobileMenu() {
   const headerActions = document.getElementById('header-actions');
   if (!mobileMenuBtn || !headerActions) return;
 
-  // Show the ⋮ button on mobile via media query match
   const mq = window.matchMedia('(max-width: 640px)');
   function updateVisibility() {
     if (mq.matches) {
@@ -133,7 +208,6 @@ function setupMobileMenu() {
     mobileMenuBtn.setAttribute('aria-expanded', open);
   });
 
-  // Close on outside click
   document.addEventListener('click', (e) => {
     if (!headerActions.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
       headerActions.classList.remove('mobile-open');
@@ -153,16 +227,26 @@ function setupExport() {
   }
 }
 
-// ─── View toggle ────────────────────────────────────────────────────────────────
+// ─── View toggle (garden → beds → list → garden) ───────────────────────────────
+
+const VIEW_MODES = ['garden', 'beds', 'list'];
+const VIEW_LABELS = { garden: '⊞ List view', beds: '🌿 Garden view', list: '⊟ Beds view' };
 
 function setupViewToggle() {
   if (!viewToggle) return;
+  syncViewToggleLabel();
   viewToggle.addEventListener('click', () => {
-    viewMode = viewMode === 'garden' ? 'list' : 'garden';
-    viewToggle.textContent = viewMode === 'garden' ? '⊞ List view' : '🌿 Garden view';
-    viewToggle.setAttribute('aria-pressed', viewMode === 'list');
+    const idx = VIEW_MODES.indexOf(viewMode);
+    viewMode = VIEW_MODES[(idx + 1) % VIEW_MODES.length];
+    syncViewToggleLabel();
     refresh();
   });
+}
+
+function syncViewToggleLabel() {
+  if (!viewToggle) return;
+  viewToggle.textContent = VIEW_LABELS[viewMode] || '⊞ List view';
+  viewToggle.setAttribute('aria-pressed', viewMode !== 'garden');
 }
 
 // ─── Legend ──────────────────────────────────────────────────────────────────────
@@ -171,8 +255,8 @@ function renderLegend() {
   if (!legendBar) return;
   legendBar.innerHTML = STATUS_LEGEND.map(
     (item) => `
-    <div class="legend-item" title="${item.desc}">
-      <span class="legend-dot" style="background:${STATUS_COLORS[item.status]}"></span>
+    <div class="legend-item" title="${item.desc}" role="listitem">
+      <span class="legend-dot" style="background:${STATUS_COLORS[item.status]}" aria-hidden="true"></span>
       <span class="legend-label">${item.label}</span>
     </div>`
   ).join('');
@@ -255,7 +339,6 @@ function initAmbientParticles() {
   init();
   window.addEventListener('resize', resize);
 
-  // Pause animation when tab is hidden to save resources
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       stop();
@@ -277,12 +360,31 @@ function setupGlobalListeners() {
   });
 
   panelOverlay.addEventListener('click', handleClosePanel);
+
+  // Handle browser back/forward for deep-linking
+  window.addEventListener('popstate', () => {
+    readURLState();
+    syncViewToggleLabel();
+    refresh();
+  });
+}
+
+// ─── Open source from URL deep link ─────────────────────────────────────────────
+
+function openDeepLinkedSource() {
+  const params = new URLSearchParams(window.location.search);
+  const sourceId = params.get('source');
+  if (sourceId) {
+    const source = allSources.find((s) => s.id === sourceId);
+    if (source) selectSource(source);
+  }
 }
 
 // ─── Boot ────────────────────────────────────────────────────────────────────────
 
 async function reloadSources() {
   allSources = await loadSources();
+  recordScoreSnapshot(allSources);
   refresh();
 }
 
@@ -291,7 +393,11 @@ async function init() {
     if (loadingEl) loadingEl.classList.remove('hidden');
     if (errorEl) errorEl.classList.add('hidden');
 
+    // Read URL state before loading data
+    readURLState();
+
     allSources = await loadSources();
+    recordScoreSnapshot(allSources);
 
     if (loadingEl) loadingEl.classList.add('hidden');
 
@@ -303,6 +409,10 @@ async function init() {
     setupGlobalListeners();
     initAmbientParticles();
     refresh();
+    openDeepLinkedSource();
+
+    // Start auto-refresh
+    startAutoRefresh();
   } catch (err) {
     if (loadingEl) loadingEl.classList.add('hidden');
     if (errorEl) {
