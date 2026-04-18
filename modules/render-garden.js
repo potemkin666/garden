@@ -84,7 +84,8 @@ export function renderGarden(container, sources, onSelect) {
     let next = idx;
 
     // Estimate columns from grid layout
-    const cols = Math.max(1, Math.round(container.offsetWidth / (cards[0]?.offsetWidth || 1)));
+    const cardWidth = cards[0]?.offsetWidth || 130;
+    const cols = Math.max(1, Math.round(container.offsetWidth / cardWidth));
 
     switch (e.key) {
       case 'ArrowRight': next = Math.min(idx + 1, cards.length - 1); break;

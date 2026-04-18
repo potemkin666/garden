@@ -135,7 +135,7 @@ function setupMobileMenu() {
 
   // Close on outside click
   document.addEventListener('click', (e) => {
-    if (!headerActions.contains(e.target) && e.target !== mobileMenuBtn) {
+    if (!headerActions.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
       headerActions.classList.remove('mobile-open');
       mobileMenuBtn.setAttribute('aria-expanded', 'false');
     }
