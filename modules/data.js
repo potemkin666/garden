@@ -80,7 +80,7 @@ function transformAlbertAlertSource(id, h) {
     status,
     lastSuccessAt: h.lastSuccessfulAt ?? null,
     lastFailureAt: h.lastFailureAt ?? null,
-    failureCount: (h.consecutiveFailures || 0) + (h.failedRuns || 0),
+    failureCount: h.consecutiveFailures || 0,
     freshnessScore: h.healthScore ?? 50,
     reliabilityScore,
     blockedReason: status === 'blocked'
@@ -121,7 +121,7 @@ function deriveIncidentSeverity(h) {
   if (!h.recentErrors || h.recentErrors.length === 0) return null;
   const cat = h.lastErrorCategory || '';
   if (cat === 'blocked-or-auth' || cat === 'anti-bot-protection') return 'high';
-  if (cat === 'not-found-404') return 'critical';
+  if (cat === 'not-found-404') return 'high';
   if (cat === 'network-failure') return 'medium';
   return 'low';
 }

@@ -155,7 +155,7 @@ garden/
 │   └── sources.json        # Local fallback data (used when AlbertAlert is unreachable)
 ├── api/
 │   ├── index.html          # Healthy sources viewer for external consumers
-│   └── README.md           # brialert integration docs
+│   └── README.md           # AlbertAlert integration docs
 └── modules/
     ├── data.js             # Data loading (AlbertAlert fetch + localStorage merge)
     ├── state-map.js        # Status → visual property mapping
