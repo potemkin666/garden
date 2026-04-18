@@ -1,22 +1,24 @@
 # Signal Garden API — Healthy Sources Feed
 
-This directory provides a simple read-only endpoint for external consumers (like [brialert](https://github.com/potemkin666/brialert)) to fetch only the healthy sources from the garden.
+This directory provides a simple read-only endpoint for external consumers to fetch only the healthy sources from the garden.
 
 ## How It Works
 
-The garden publishes all source data at:
+Signal Garden pulls live source-health data from [AlbertAlert](https://github.com/potemkin666/AlbertAlert). The `api/index.html` page loads and transforms this data, filtering to only **healthy** sources (excluding quarantined), and displays the result as copyable/downloadable JSON.
+
+## Upstream data
+
+AlbertAlert publishes its hourly feed at:
 
 ```
-https://potemkin666.github.io/garden/data/sources.json
+https://raw.githubusercontent.com/potemkin666/AlbertAlert/main/live-alerts.json
 ```
 
-The `api/index.html` page loads this data, filters to only **healthy** sources (excluding quarantined), and displays the result as copyable/downloadable JSON.
+Signal Garden extracts the `health.sources` block and derives per-source status, freshness, reliability, and failure counts.
 
-## For brialert Integration
+## Fetching healthy sources
 
-### Option 1: Fetch and filter directly (recommended)
-
-From brialert or any consuming repo, fetch the full sources list and filter client-side:
+From any consuming repo, fetch the garden's processed sources and filter:
 
 ```js
 const GARDEN_URL = 'https://potemkin666.github.io/garden/data/sources.json';
@@ -28,20 +30,14 @@ async function getHealthySources() {
 }
 ```
 
-### Option 2: Use the API page
+> **Note:** The local `data/sources.json` is a fallback fixture. In production, the garden derives its data live from AlbertAlert on each page load.
+
+## Using the API page
 
 Visit `https://potemkin666.github.io/garden/api/` in a browser to:
 - View the filtered healthy sources as JSON
 - Copy to clipboard
 - Download as `healthy-sources.json`
-
-### Option 3: Fetch from raw GitHub (no Pages required)
-
-If the repo is public, you can fetch the raw JSON directly:
-
-```
-https://raw.githubusercontent.com/potemkin666/garden/main/data/sources.json
-```
 
 ## Source Data Model
 
