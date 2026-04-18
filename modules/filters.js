@@ -143,6 +143,12 @@ export function renderFilterBar(container, allSources, activeFilters, onChange) 
 
   const categories = getCategories(allSources);
 
+  // Preserve search focus and cursor position across re-renders
+  const existingSearch = container.querySelector('#filter-search');
+  const searchHadFocus = existingSearch && document.activeElement === existingSearch;
+  const searchSelStart = searchHadFocus ? existingSearch.selectionStart : null;
+  const searchSelEnd = searchHadFocus ? existingSearch.selectionEnd : null;
+
   container.innerHTML = `
     <div class="filter-group filter-status-group" role="group" aria-label="Filter by status">
       ${STATUS_FILTER_OPTIONS.map(
@@ -170,6 +176,17 @@ export function renderFilterBar(container, allSources, activeFilters, onChange) 
       </label>
     </div>
   `;
+
+  // Restore search focus and cursor position
+  if (searchHadFocus) {
+    const newSearch = container.querySelector('#filter-search');
+    if (newSearch) {
+      newSearch.focus();
+      if (searchSelStart !== null) {
+        newSearch.setSelectionRange(searchSelStart, searchSelEnd);
+      }
+    }
+  }
 
   // Status buttons
   container.querySelectorAll('.status-filter').forEach((btn) => {

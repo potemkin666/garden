@@ -8,7 +8,7 @@ import { applyFilters, applySorting, countByStatus, renderFilterBar } from './mo
 import { renderGarden, renderListView } from './modules/render-garden.js';
 import { openPanel, closePanel } from './modules/detail-panel.js';
 import { openAddSourceModal } from './modules/add-source.js';
-import { STATUS_COLORS, STATUS_LEGEND } from './modules/state-map.js';
+import { STATUS_COLORS, STATUS_LEGEND, clearVisualCache } from './modules/state-map.js';
 
 // ─── State ──────────────────────────────────────────────────────────────────────
 
@@ -41,6 +41,7 @@ const exportHealthyBtn = document.getElementById('export-healthy-btn');
 // ─── Rendering ──────────────────────────────────────────────────────────────────
 
 function refresh() {
+  clearVisualCache();
   const filtered = applyFilters(allSources, activeFilters);
   const sorted = applySorting(filtered, activeFilters.sort);
 
