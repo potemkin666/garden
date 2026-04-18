@@ -3,6 +3,7 @@
  */
 
 import { mapSourceToVisual } from './state-map.js';
+import { escapeHtml } from './utils.js';
 
 /**
  * Apply all active filters to a sources array.
@@ -154,25 +155,25 @@ export function renderFilterBar(container, allSources, activeFilters, onChange) 
       ${STATUS_FILTER_OPTIONS.map(
         (opt) =>
           `<button class="filter-btn status-filter ${activeFilters.status === opt.value ? 'active' : ''}"
-            data-filter-status="${opt.value}"
-            aria-pressed="${activeFilters.status === opt.value}">${opt.label}</button>`
+            data-filter-status="${escapeHtml(opt.value)}"
+            aria-pressed="${activeFilters.status === opt.value}">${escapeHtml(opt.label)}</button>`
       ).join('')}
     </div>
     <div class="filter-group filter-aux-group">
       <select class="filter-select" id="filter-category" aria-label="Filter by category">
         ${categories.map(
-          (c) => `<option value="${c}" ${activeFilters.category === c ? 'selected' : ''}>${c === 'all' ? 'All categories' : c}</option>`
+          (c) => `<option value="${escapeHtml(c)}" ${activeFilters.category === c ? 'selected' : ''}>${c === 'all' ? 'All categories' : escapeHtml(c)}</option>`
         ).join('')}
       </select>
       <select class="filter-select" id="filter-sort" aria-label="Sort by">
         ${SORT_OPTIONS.map(
           (opt) =>
-            `<option value="${opt.value}" ${activeFilters.sort === opt.value ? 'selected' : ''}>Sort: ${opt.label}</option>`
+            `<option value="${escapeHtml(opt.value)}" ${activeFilters.sort === opt.value ? 'selected' : ''}>Sort: ${escapeHtml(opt.label)}</option>`
         ).join('')}
       </select>
       <label class="filter-search-label" aria-label="Search sources">
         <input type="search" class="filter-search" id="filter-search"
-          placeholder="Search…" value="${activeFilters.search || ''}" />
+          placeholder="Search…" value="${escapeHtml(activeFilters.search || '')}" />
       </label>
     </div>
   `;

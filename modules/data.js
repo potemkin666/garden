@@ -84,7 +84,7 @@ function transformAlbertAlertSource(id, h) {
     freshnessScore: h.healthScore ?? 50,
     reliabilityScore,
     blockedReason: status === 'blocked'
-      ? (h.lastErrorMessage || h.quarantineReason || null)
+      ? (h.lastErrorMessage || h.quarantineReason || `Blocked — ${h.lastErrorCategory || 'no details available'}`)
       : null,
     quarantined: Boolean(h.quarantined),
     incidentCountRecent: h.recentErrors?.length || 0,

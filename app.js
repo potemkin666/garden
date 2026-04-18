@@ -230,7 +230,7 @@ function setupExport() {
 // ─── View toggle (garden → beds → list → garden) ───────────────────────────────
 
 const VIEW_MODES = ['garden', 'beds', 'list'];
-const VIEW_LABELS = { garden: '⊞ List view', beds: '🌿 Garden view', list: '⊟ Beds view' };
+const VIEW_LABELS = { garden: 'Switch to beds view', beds: 'Switch to list view', list: 'Switch to garden view' };
 
 function setupViewToggle() {
   if (!viewToggle) return;
