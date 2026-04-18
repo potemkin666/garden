@@ -28,6 +28,60 @@ function blockedReasonBlock(reason) {
 }
 
 /**
+ * Show an in-app confirmation dialog instead of the native confirm().
+ * Returns a Promise that resolves to true (confirmed) or false (cancelled).
+ */
+function showConfirmModal(message) {
+  return new Promise((resolve) => {
+    // Remove any existing confirm modal
+    const existing = document.getElementById('confirm-modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay confirm-modal-overlay';
+    overlay.id = 'confirm-modal-overlay';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-container confirm-modal';
+    dialog.setAttribute('role', 'alertdialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-label', 'Confirm action');
+
+    dialog.innerHTML = `
+      <div class="confirm-body">
+        <p class="confirm-message">${escapeHtml(message)}</p>
+      </div>
+      <div class="confirm-actions">
+        <button class="form-btn form-btn-cancel" id="confirm-cancel-btn">Cancel</button>
+        <button class="form-btn confirm-btn-danger" id="confirm-ok-btn">Remove</button>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(dialog);
+
+    function cleanup(result) {
+      overlay.remove();
+      dialog.remove();
+      document.removeEventListener('keydown', escHandler);
+      resolve(result);
+    }
+
+    function escHandler(e) {
+      if (e.key === 'Escape') cleanup(false);
+    }
+
+    overlay.addEventListener('click', () => cleanup(false));
+    dialog.querySelector('#confirm-cancel-btn').addEventListener('click', () => cleanup(false));
+    dialog.querySelector('#confirm-ok-btn').addEventListener('click', () => cleanup(true));
+    document.addEventListener('keydown', escHandler);
+
+    // Focus the cancel button by default (safe option)
+    setTimeout(() => dialog.querySelector('#confirm-cancel-btn')?.focus(), 60);
+  });
+}
+
+/**
  * Build and return the inner HTML for the detail panel.
  */
 function buildPanelContent(source, isUserOwned = false) {
@@ -136,8 +190,9 @@ export function openPanel(source, panelEl, overlayEl, onClose, onRemove = null) 
 
   const removeBtn = panelEl.querySelector('#panel-remove-btn');
   if (removeBtn && typeof onRemove === 'function') {
-    removeBtn.addEventListener('click', () => {
-      if (confirm(`Remove "${source.name}" from the garden?`)) {
+    removeBtn.addEventListener('click', async () => {
+      const confirmed = await showConfirmModal(`Remove "${source.name}" from the garden?`);
+      if (confirmed) {
         onRemove(source.id);
       }
     });

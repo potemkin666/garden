@@ -306,7 +306,20 @@ async function init() {
   } catch (err) {
     if (loadingEl) loadingEl.classList.add('hidden');
     if (errorEl) {
-      errorEl.textContent = `Failed to load garden data: ${err.message}`;
+      errorEl.innerHTML = '';
+      const msg = document.createElement('span');
+      msg.textContent = `Failed to load garden data: ${err.message}`;
+      errorEl.appendChild(msg);
+
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'retry-btn';
+      retryBtn.textContent = '↻ Retry';
+      retryBtn.addEventListener('click', () => {
+        errorEl.classList.add('hidden');
+        init();
+      });
+      errorEl.appendChild(retryBtn);
+
       errorEl.classList.remove('hidden');
     }
     console.error('[Signal Garden] Init error:', err);
