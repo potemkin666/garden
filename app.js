@@ -8,7 +8,7 @@ import { applyFilters, applySorting, countByStatus, renderFilterBar } from './mo
 import { renderGarden, renderListView } from './modules/render-garden.js';
 import { openPanel, closePanel } from './modules/detail-panel.js';
 import { openAddSourceModal } from './modules/add-source.js';
-import { STATUS_COLORS, STATUS_LEGEND } from './modules/state-map.js';
+import { STATUS_COLORS, STATUS_LEGEND, clearVisualCache } from './modules/state-map.js';
 
 // ─── State ──────────────────────────────────────────────────────────────────────
 
@@ -41,6 +41,7 @@ const exportHealthyBtn = document.getElementById('export-healthy-btn');
 // ─── Rendering ──────────────────────────────────────────────────────────────────
 
 function refresh() {
+  clearVisualCache();
   const filtered = applyFilters(allSources, activeFilters);
   const sorted = applySorting(filtered, activeFilters.sort);
 
@@ -106,6 +107,41 @@ function setupAddSource() {
   });
 }
 
+// ─── Mobile actions menu ────────────────────────────────────────────────────
+
+function setupMobileMenu() {
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const headerActions = document.getElementById('header-actions');
+  if (!mobileMenuBtn || !headerActions) return;
+
+  // Show the ⋮ button on mobile via media query match
+  const mq = window.matchMedia('(max-width: 640px)');
+  function updateVisibility() {
+    if (mq.matches) {
+      mobileMenuBtn.classList.remove('hidden');
+    } else {
+      mobileMenuBtn.classList.add('hidden');
+      headerActions.classList.remove('mobile-open');
+    }
+  }
+  mq.addEventListener('change', updateVisibility);
+  updateVisibility();
+
+  mobileMenuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = headerActions.classList.toggle('mobile-open');
+    mobileMenuBtn.setAttribute('aria-expanded', open);
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!headerActions.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+      headerActions.classList.remove('mobile-open');
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
 // ─── Export ──────────────────────────────────────────────────────────────────────
 
 function setupExport() {
@@ -151,6 +187,8 @@ function initAmbientParticles() {
   let w, h;
   const particles = [];
   const PARTICLE_COUNT = 40;
+  let rafId = null;
+  let running = false;
 
   function resize() {
     w = canvas.width = window.innerWidth;
@@ -193,7 +231,22 @@ function initAmbientParticles() {
       ctx.fillStyle = `hsla(${p.hue}, 40%, 50%, ${p.opacity})`;
       ctx.fill();
     }
-    requestAnimationFrame(draw);
+    rafId = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    if (running) return;
+    running = true;
+    draw();
+  }
+
+  function stop() {
+    if (!running) return;
+    running = false;
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
   }
 
   // Respect reduced motion
@@ -201,7 +254,17 @@ function initAmbientParticles() {
 
   init();
   window.addEventListener('resize', resize);
-  draw();
+
+  // Pause animation when tab is hidden to save resources
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stop();
+    } else {
+      start();
+    }
+  });
+
+  start();
 }
 
 // ─── Keyboard / overlay close ───────────────────────────────────────────────────
@@ -235,6 +298,7 @@ async function init() {
     setupViewToggle();
     setupAddSource();
     setupExport();
+    setupMobileMenu();
     renderLegend();
     setupGlobalListeners();
     initAmbientParticles();
@@ -242,7 +306,20 @@ async function init() {
   } catch (err) {
     if (loadingEl) loadingEl.classList.add('hidden');
     if (errorEl) {
-      errorEl.textContent = `Failed to load garden data: ${err.message}`;
+      errorEl.innerHTML = '';
+      const msg = document.createElement('span');
+      msg.textContent = `Failed to load garden data: ${err.message}`;
+      errorEl.appendChild(msg);
+
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'retry-btn';
+      retryBtn.textContent = '↻ Retry';
+      retryBtn.addEventListener('click', () => {
+        errorEl.classList.add('hidden');
+        init();
+      });
+      errorEl.appendChild(retryBtn);
+
       errorEl.classList.remove('hidden');
     }
     console.error('[Signal Garden] Init error:', err);

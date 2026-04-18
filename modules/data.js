@@ -87,7 +87,7 @@ export function exportSourcesJSON(allSources) {
  */
 export function exportHealthyJSON(allSources) {
   const healthy = allSources.filter(
-    (s) => s.status === 'healthy' && !s.quarantined
+    (s) => (s.status === 'healthy' || s.status === 'flowering') && !s.quarantined
   );
   const json = JSON.stringify(healthy, null, 2);
   const blob = new Blob([json], { type: 'application/json' });

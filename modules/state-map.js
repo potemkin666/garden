@@ -5,11 +5,31 @@
 
 import { clamp, lerp } from './utils.js';
 
+// ─── Visual cache ───────────────────────────────────────────────────────────────
+// Keyed by source.id; invalidated each render cycle via clearVisualCache().
+const _visualCache = new Map();
+
+/**
+ * Clear the visual cache. Call once at the start of each render cycle.
+ */
+export function clearVisualCache() {
+  _visualCache.clear();
+}
+
 /**
  * @param {Object} source - Source data object from sources.json
  * @returns {Object} visual - Visual property bag consumed by render-plant.js
  */
 export function mapSourceToVisual(source) {
+  if (_visualCache.has(source.id)) {
+    return _visualCache.get(source.id);
+  }
+  const visual = _computeVisual(source);
+  _visualCache.set(source.id, visual);
+  return visual;
+}
+
+function _computeVisual(source) {
   const {
     status,
     freshnessScore,
