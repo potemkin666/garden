@@ -1,27 +1,145 @@
 /**
  * data.js — Data loading, persistence, and normalization for Signal Garden.
- * Loads base JSON fixtures + merges user-added sources from localStorage.
+ * Fetches live source-health data from AlbertAlert and merges with
+ * user-added sources from localStorage.
  */
 
-const DATA_PATH = './data/sources.json';
+const ALBERTALERT_LIVE_URL =
+  'https://raw.githubusercontent.com/potemkin666/AlbertAlert/main/live-alerts.json';
+const FALLBACK_DATA_PATH = './data/sources.json';
 const STORAGE_KEY = 'signal-garden-user-sources';
 
 /**
- * Fetch base source data and merge with user-added sources from localStorage.
+ * Fetch source-health data from AlbertAlert, falling back to local fixtures.
+ * Always merges with user-added sources from localStorage.
  * @returns {Promise<Array>} Array of source objects
  */
 export async function loadSources() {
-  const response = await fetch(DATA_PATH);
+  let base;
+  try {
+    base = await loadAlbertAlertSources();
+  } catch (err) {
+    console.warn('[Signal Garden] AlbertAlert fetch failed, using local fallback:', err.message);
+    base = await loadLocalSources();
+  }
+  const user = getUserSources();
+  return mergeSources(base, user);
+}
+
+/**
+ * Fetch AlbertAlert live-alerts.json and extract per-source health data.
+ * @returns {Promise<Array>} Array of normalized source objects
+ */
+async function loadAlbertAlertSources() {
+  const response = await fetch(ALBERTALERT_LIVE_URL);
   if (!response.ok) {
-    throw new Error(`Failed to load source data: ${response.status} ${response.statusText}`);
+    throw new Error(`AlbertAlert fetch failed: ${response.status} ${response.statusText}`);
+  }
+  const payload = await response.json();
+  const healthSources = payload?.health?.sources;
+  if (!healthSources || typeof healthSources !== 'object') {
+    throw new Error('AlbertAlert payload missing health.sources');
+  }
+  return Object.entries(healthSources).map(([id, entry]) =>
+    normalizeSource(transformAlbertAlertSource(id, entry))
+  );
+}
+
+/**
+ * Load local fallback data from data/sources.json.
+ * @returns {Promise<Array>}
+ */
+async function loadLocalSources() {
+  const response = await fetch(FALLBACK_DATA_PATH);
+  if (!response.ok) {
+    throw new Error(`Local fallback failed: ${response.status} ${response.statusText}`);
   }
   const data = await response.json();
   if (!Array.isArray(data)) {
-    throw new Error('Source data must be a JSON array.');
+    throw new Error('Local source data must be a JSON array.');
   }
-  const base = data.map(normalizeSource);
-  const user = getUserSources();
-  return mergeSources(base, user);
+  return data.map(normalizeSource);
+}
+
+/**
+ * Transform an AlbertAlert health.sources entry into a Signal Garden source
+ * object. Fields that don't exist in AlbertAlert are derived from available
+ * health metrics.
+ */
+function transformAlbertAlertSource(id, h) {
+  const status = deriveStatus(h);
+  const totalRuns = (h.successfulRuns || 0) + (h.failedRuns || 0) + (h.emptyRuns || 0);
+  const reliabilityScore = totalRuns > 0
+    ? Math.round(((h.successfulRuns || 0) / totalRuns) * 100)
+    : 50;
+
+  return {
+    id,
+    name: h.provider || id,
+    category: h.lane || 'uncategorized',
+    status,
+    lastSuccessAt: h.lastSuccessfulAt ?? null,
+    lastFailureAt: h.lastFailureAt ?? null,
+    failureCount: h.consecutiveFailures || 0,
+    freshnessScore: h.healthScore ?? 50,
+    reliabilityScore,
+    blockedReason: status === 'blocked'
+      ? (h.lastErrorMessage || h.quarantineReason || `Blocked — ${h.lastErrorCategory || 'no details available'}`)
+      : null,
+    quarantined: Boolean(h.quarantined),
+    incidentCountRecent: h.recentErrors?.length || 0,
+    incidentSeverity: deriveIncidentSeverity(h),
+    notes: buildNotes(h),
+  };
+}
+
+/**
+ * Derive a Signal Garden status string from AlbertAlert health metrics.
+ */
+function deriveStatus(h) {
+  if (h.quarantined) return 'quarantined';
+  if ((h.consecutiveDeadUrlFailures || 0) > 0) return 'dead';
+  const errCat = h.lastErrorCategory || '';
+  if (
+    (h.consecutiveBlockedFailures || 0) > 0 ||
+    errCat === 'blocked-or-auth' ||
+    errCat === 'anti-bot-protection'
+  ) {
+    return 'blocked';
+  }
+  const score = h.healthScore ?? 50;
+  if ((h.consecutiveFailures || 0) > 2 || score < 20) return 'failing';
+  if (score < 50) return 'stale';
+  if (score < 80 && (h.successfulRuns || 0) > 0 && (h.failedRuns || 0) > 0) return 'recovering';
+  return 'healthy';
+}
+
+/**
+ * Map AlbertAlert error severity to Signal Garden incident severity.
+ */
+function deriveIncidentSeverity(h) {
+  if (!h.recentErrors || h.recentErrors.length === 0) return null;
+  const cat = h.lastErrorCategory || '';
+  if (cat === 'blocked-or-auth' || cat === 'anti-bot-protection') return 'high';
+  if (cat === 'not-found-404') return 'high';
+  if (cat === 'network-failure') return 'medium';
+  return 'low';
+}
+
+/**
+ * Build a human-readable notes string from AlbertAlert health metadata.
+ */
+function buildNotes(h) {
+  const parts = [];
+  if (h.kind) parts.push(`Kind: ${h.kind}`);
+  if (h.quarantineReason) parts.push(h.quarantineReason);
+  else if (h.lastErrorMessage) parts.push(h.lastErrorMessage);
+  if (h.autoSkipReason) parts.push(`Skip reason: ${h.autoSkipReason}`);
+  const total = (h.successfulRuns || 0) + (h.failedRuns || 0) + (h.emptyRuns || 0);
+  if (total > 0) {
+    parts.push(`Runs: ${h.successfulRuns || 0} ok, ${h.failedRuns || 0} fail, ${h.emptyRuns || 0} empty`);
+  }
+  return parts.join('. ') || '';
 }
 
 /**

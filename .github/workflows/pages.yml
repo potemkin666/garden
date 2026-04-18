@@ -15,7 +15,49 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Validate sources.json
+        run: node -e "const d=JSON.parse(require('fs').readFileSync('data/sources.json','utf8')); if(!Array.isArray(d)) throw new Error('sources.json must be an array'); d.forEach((s,i)=>{if(!s.id) throw new Error('source '+i+' missing id');if(!s.name) throw new Error('source '+i+' missing name')}); console.log(d.length+' sources validated')"
+
+      - name: Validate HTML structure
+        run: |
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('index.html', 'utf8');
+            const checks = [
+              [/<html[^>]*lang=/, 'Missing lang attribute on <html>'],
+              [/<meta[^>]*charset/, 'Missing charset meta tag'],
+              [/<meta[^>]*viewport/, 'Missing viewport meta tag'],
+              [/<title>/, 'Missing <title> tag'],
+              [/type=\"module\"/, 'Missing type=module on script'],
+            ];
+            let ok = true;
+            checks.forEach(([re, msg]) => {
+              if (!re.test(html)) { console.error('FAIL: ' + msg); ok = false; }
+              else console.log('PASS: ' + msg.replace('Missing', 'Has'));
+            });
+            if (!ok) process.exit(1);
+            console.log('HTML validation passed');
+          "
+
   deploy:
+    needs: validate
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -81,7 +81,7 @@
   <body>
     <div class="header">
       <h1>᳃ Signal Garden — Healthy Sources</h1>
-      <div class="subtitle">Read-only feed endpoint for external consumers</div>
+      <div class="subtitle">Source-health data from AlbertAlert</div>
     </div>
     <div class="meta">
       Showing <span id="count">0</span> healthy source(s) &middot;
@@ -96,7 +96,8 @@
     <pre id="json-output">Loading…</pre>
 
     <script type="module">
-      const DATA_URL = '../data/sources.json';
+      const ALBERTALERT_URL = 'https://raw.githubusercontent.com/potemkin666/AlbertAlert/main/live-alerts.json';
+      const FALLBACK_URL = '../data/sources.json';
       const output = document.getElementById('json-output');
       const countEl = document.getElementById('count');
       const tsEl = document.getElementById('timestamp');
@@ -104,13 +105,45 @@
 
       let healthyJSON = '[]';
 
+      function deriveStatus(h) {
+        if (h.quarantined) return 'quarantined';
+        if ((h.consecutiveDeadUrlFailures || 0) > 0) return 'dead';
+        const errCat = h.lastErrorCategory || '';
+        if ((h.consecutiveBlockedFailures || 0) > 0 || errCat === 'blocked-or-auth' || errCat === 'anti-bot-protection') return 'blocked';
+        const score = h.healthScore ?? 50;
+        if ((h.consecutiveFailures || 0) > 2 || score < 20) return 'failing';
+        if (score < 50) return 'stale';
+        if (score < 80 && (h.successfulRuns || 0) > 0 && (h.failedRuns || 0) > 0) return 'recovering';
+        return 'healthy';
+      }
+
+      function transformSource(id, h) {
+        return {
+          id,
+          name: h.provider || id,
+          category: h.lane || 'uncategorized',
+          status: deriveStatus(h),
+          healthScore: h.healthScore ?? 50,
+          quarantined: Boolean(h.quarantined),
+        };
+      }
+
       async function load() {
         try {
-          const res = await fetch(DATA_URL);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const sources = await res.json();
+          let sources;
+          try {
+            const res = await fetch(ALBERTALERT_URL);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const payload = await res.json();
+            const healthSources = payload?.health?.sources;
+            if (!healthSources) throw new Error('Missing health.sources');
+            sources = Object.entries(healthSources).map(([id, entry]) => transformSource(id, entry));
+          } catch {
+            const res = await fetch(FALLBACK_URL);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            sources = await res.json();
+          }
 
-          // Filter to healthy and flowering (healthy + active incidents)
           const healthy = sources.filter((s) => {
             if (s.quarantined) return false;
             return s.status === 'healthy';
@@ -121,7 +154,11 @@
           countEl.textContent = healthy.length;
           tsEl.textContent = new Date().toISOString();
         } catch (err) {
-          output.innerHTML = `<span class="error">Failed to load: ${err.message}</span>`;
+          output.innerHTML = '';
+          const errSpan = document.createElement('span');
+          errSpan.className = 'error';
+          errSpan.textContent = `Failed to load: ${err.message}`;
+          output.appendChild(errSpan);
         }
       }
 

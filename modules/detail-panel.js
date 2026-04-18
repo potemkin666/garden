@@ -1,9 +1,14 @@
 /**
  * detail-panel.js — Side panel showing detailed source information.
+ *
+ * Improvements:
+ *  2. Sparklines — shows freshness/reliability trend from localStorage history
+ *  9. Error categorization and remediation hints — suggests fixes based on error category
  */
 
 import { mapSourceToVisual, STATUS_COLORS, STATUS_LABELS } from './state-map.js';
 import { formatDate, timeAgo, escapeHtml, scoreBar } from './utils.js';
+import { getSourceHistory, renderSparkline } from './sparkline.js';
 
 const SEVERITY_COLORS = {
   low: '#6a8a4a',
@@ -24,7 +29,34 @@ function blockedReasonBlock(reason) {
     <div class="detail-block hostile-block">
       <h4 class="block-label">Block Reason</h4>
       <p class="block-text">${escapeHtml(reason)}</p>
+      ${buildRemediationHint(reason)}
     </div>`;
+}
+
+/**
+ * Generate a remediation hint based on the block/error reason text.
+ */
+function buildRemediationHint(reason) {
+  if (!reason) return '';
+  const lower = reason.toLowerCase();
+  let hint = '';
+
+  if (lower.includes('anti-bot') || lower.includes('cloudflare') || lower.includes('captcha')) {
+    hint = 'Consider using a headless browser (Playwright/Puppeteer) or a residential proxy to bypass anti-bot protection.';
+  } else if (lower.includes('403') || lower.includes('auth') || lower.includes('api key') || lower.includes('credential')) {
+    hint = 'Rotate or refresh API credentials. Check if the access token has expired or been revoked.';
+  } else if (lower.includes('404') || lower.includes('not found') || lower.includes('removed') || lower.includes('deprecated')) {
+    hint = 'The endpoint may have been removed or relocated. Search for a replacement URL or updated API docs.';
+  } else if (lower.includes('429') || lower.includes('rate limit')) {
+    hint = 'Implement exponential backoff and reduce polling frequency. Consider using a distributed proxy pool.';
+  } else if (lower.includes('timeout') || lower.includes('network') || lower.includes('dns')) {
+    hint = 'Check network connectivity and DNS resolution. The server may be temporarily unreachable.';
+  } else if (lower.includes('ssl') || lower.includes('certificate')) {
+    hint = 'The SSL certificate may have expired or changed. Verify the certificate chain.';
+  }
+
+  if (!hint) return '';
+  return `<p class="remediation-hint"><span class="hint-icon" aria-hidden="true">💡</span> ${escapeHtml(hint)}</p>`;
 }
 
 /**
@@ -89,6 +121,15 @@ function buildPanelContent(source, isUserOwned = false) {
   const statusColor = STATUS_COLORS[visual.status] || '#5a5048';
   const statusLabel = STATUS_LABELS[visual.status] || visual.status;
 
+  // Sparkline history
+  const history = getSourceHistory(source.id);
+  const freshnessSparkline = history
+    ? renderSparkline(history.freshness, { color: '#5a9a4a', label: 'Freshness trend', width: 80, height: 18 })
+    : '';
+  const reliabilitySparkline = history
+    ? renderSparkline(history.reliability, { color: '#3a7a9a', label: 'Reliability trend', width: 80, height: 18 })
+    : '';
+
   return `
     <div class="panel-header">
       <div class="panel-title-row">
@@ -112,11 +153,13 @@ function buildPanelContent(source, isUserOwned = false) {
           <span class="score-val">${source.freshnessScore}</span>
           ${scoreBar(source.freshnessScore)}
         </div>
+        ${freshnessSparkline ? `<div class="sparkline-row">${freshnessSparkline}</div>` : ''}
         <div class="score-row">
           <span class="score-name">Reliability</span>
           <span class="score-val">${source.reliabilityScore}</span>
           ${scoreBar(source.reliabilityScore)}
         </div>
+        ${reliabilitySparkline ? `<div class="sparkline-row">${reliabilitySparkline}</div>` : ''}
       </div>
 
       <div class="detail-block">
@@ -153,6 +196,7 @@ function buildPanelContent(source, isUserOwned = false) {
       <div class="detail-block">
         <h4 class="block-label">Notes</h4>
         <p class="block-text">${escapeHtml(source.notes)}</p>
+        ${buildRemediationHintFromNotes(source)}
       </div>` : ''}
 
       <div class="detail-block">
@@ -167,6 +211,17 @@ function buildPanelContent(source, isUserOwned = false) {
 
     </div>
   `;
+}
+
+/**
+ * Generate remediation hint from the notes field for non-blocked sources.
+ */
+function buildRemediationHintFromNotes(source) {
+  // Only show for sources that are failing, stale, or dead
+  if (!['failing', 'stale', 'dead', 'blocked'].includes(source.status)) return '';
+  // Don't duplicate if blockedReason already provides a hint
+  if (source.blockedReason) return '';
+  return buildRemediationHint(source.notes);
 }
 
 /**

@@ -63,5 +63,5 @@ export function escapeHtml(str) {
 
 export function scoreBar(value, max = 100) {
   const pct = clamp((value / max) * 100, 0, 100).toFixed(1);
-  return `<div class="score-bar"><div class="score-fill" style="width:${pct}%"></div></div>`;
+  return `<div class="score-bar" role="meter" aria-valuenow="${value}" aria-valuemin="0" aria-valuemax="${max}" aria-label="${value} out of ${max}"><div class="score-fill" style="width:${pct}%"></div></div>`;
 }

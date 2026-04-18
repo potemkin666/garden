@@ -12,11 +12,19 @@ The interface is designed to be instantly legible: you know something is wrong b
 
 ---
 
+## Data Source — AlbertAlert
+
+Signal Garden pulls live source-health data from [AlbertAlert](https://github.com/potemkin666/AlbertAlert), a terrorism monitoring web app with a curated catalog of 550+ sources. AlbertAlert's hourly feed builder tracks per-source health metrics (health score, failure counts, quarantine status, error categories) which Signal Garden transforms into its visual model.
+
+On each page load, the garden fetches `live-alerts.json` from AlbertAlert and maps every tracked source to a plant. If the fetch fails, it falls back to a local `data/sources.json` fixture.
+
+---
+
 ## Screenshot / Demo
 
 *Open `index.html` in a browser (or deploy to GitHub Pages) to see the populated garden.*
 
-The garden loads immediately with 20 mock sources covering all visual states:
+Source states are derived from AlbertAlert health metrics:
 
 | State | Visual |
 |-------|--------|
@@ -57,33 +65,29 @@ Edit `data/sources.json` directly. Each source object follows the data model bel
 
 ---
 
-## brialert Integration
+## AlbertAlert Integration
 
-Signal Garden publishes source data that [brialert](https://github.com/potemkin666/brialert) can consume to pick out only healthy sources for its news feed.
+Signal Garden consumes source-health data from [AlbertAlert](https://github.com/potemkin666/AlbertAlert). The data flow:
 
-### Fetching healthy sources
-
-From brialert or any consumer, fetch and filter:
-
-```js
-const GARDEN_URL = 'https://potemkin666.github.io/garden/data/sources.json';
-
-async function getHealthySources() {
-  const res = await fetch(GARDEN_URL);
-  const sources = await res.json();
-  return sources.filter(s => s.status === 'healthy' && !s.quarantined);
-}
-```
+1. AlbertAlert's hourly feed builder checks 550+ sources and writes health metrics into `live-alerts.json`.
+2. Signal Garden fetches `live-alerts.json` and extracts the `health.sources` block.
+3. Each source's health score, failure count, quarantine status, and error history are mapped to the garden's visual model.
 
 ### API page
 
-Visit `https://potemkin666.github.io/garden/api/` for a filtered view of healthy sources with copy/download buttons. See [`api/README.md`](api/README.md) for full integration docs.
+Visit `https://potemkin666.github.io/garden/api/` for a filtered view of healthy sources with copy/download buttons. See [`api/README.md`](api/README.md) for full details.
 
-### From raw GitHub (no Pages required)
+### Status derivation
 
-```
-https://raw.githubusercontent.com/potemkin666/garden/main/data/sources.json
-```
+| AlbertAlert condition | Garden status |
+|----------------------|---------------|
+| `quarantined: true` | quarantined |
+| Dead URL failures | dead |
+| Blocked/auth/anti-bot errors | blocked |
+| Consecutive failures > 2 or health score < 20 | failing |
+| Health score < 50 | stale |
+| Health score 50–80 with mixed success/failure | recovering |
+| Health score ≥ 80 | healthy |
 
 ---
 
@@ -143,24 +147,35 @@ garden/
 ├── 404.html                # Custom 404 page for GitHub Pages
 ├── styles.css              # Dark gothic botanical stylesheet
 ├── app.js                  # Entry point — wires all modules
+├── sw.js                   # Service worker for offline / PWA support
+├── manifest.json           # PWA web app manifest
+├── package.json            # Dev dependencies (Vitest)
+├── vitest.config.js        # Vitest configuration
 ├── .nojekyll               # Disables Jekyll on GitHub Pages
 ├── .github/
 │   └── workflows/
-│       └── pages.yml       # GitHub Actions deploy workflow
+│       └── pages.yml       # GitHub Actions: validate + deploy workflow
 ├── data/
-│   └── sources.json        # Base source data (20 sources)
+│   └── sources.json        # Local fallback data (used when AlbertAlert is unreachable)
 ├── api/
 │   ├── index.html          # Healthy sources viewer for external consumers
-│   └── README.md           # brialert integration docs
-└── modules/
-    ├── data.js             # Data loading, localStorage merge, export
-    ├── state-map.js        # Status → visual property mapping
-    ├── render-plant.js     # SVG plant generator (parametric)
-    ├── render-garden.js    # Garden grid and list view rendering
-    ├── detail-panel.js     # Source detail side panel
-    ├── add-source.js       # Add/edit source modal form
-    ├── filters.js          # Filter, sort, and search logic
-    └── utils.js            # Shared helpers
+│   └── README.md           # AlbertAlert integration docs
+├── modules/
+│   ├── data.js             # Data loading (AlbertAlert fetch + localStorage merge)
+│   ├── state-map.js        # Status → visual property mapping
+│   ├── render-plant.js     # SVG plant generator (parametric)
+│   ├── render-garden.js    # Garden grid, beds, and list view rendering
+│   ├── detail-panel.js     # Source detail side panel with sparklines
+│   ├── add-source.js       # Add/edit source modal form
+│   ├── filters.js          # Filter, sort, and search logic
+│   ├── sparkline.js        # Score history storage and SVG sparkline renderer
+│   └── utils.js            # Shared helpers
+└── tests/
+    ├── utils.test.js       # Utils unit tests
+    ├── data.test.js        # Data derivation logic tests
+    ├── state-map.test.js   # State-map visual mapping tests
+    ├── filters.test.js     # Filter/sort logic tests
+    └── sparkline.test.js   # Sparkline renderer tests
 ```
 
 ---
@@ -202,16 +217,15 @@ No build process is required. All assets are static. A `.nojekyll` file is inclu
 
 ---
 
-## Connecting Real Feed Data
+## Connecting a Different Feed
 
-To replace mock data with a live pipeline:
+To swap the data source:
 
-1. Generate a JSON array conforming to the data model above from your pipeline.
-2. Either:
-   - Replace `data/sources.json` with your output file, **or**
-   - Edit `modules/data.js` → `loadSources()` to fetch from your API endpoint.
+1. Edit `modules/data.js` → change `ALBERTALERT_LIVE_URL` to your feed's URL.
+2. Adjust `transformAlbertAlertSource()` (or add a new transform) to map your payload to the garden's data model.
+3. Alternatively, replace `data/sources.json` with a JSON array conforming to the data model above — it is used as a local fallback.
 
-The rest of the application will work without changes. The `normalizeSource()` function in `data.js` handles missing or partial fields gracefully.
+The `normalizeSource()` function in `data.js` handles missing or partial fields gracefully.
 
 ---
 
@@ -219,17 +233,23 @@ The rest of the application will work without changes. The `normalizeSource()` f
 
 - [x] Add Source UI with localStorage persistence
 - [x] Export all / export healthy sources as JSON
-- [x] API endpoint for brialert to consume healthy sources
+- [x] AlbertAlert integration — live source-health data from 550+ sources
 - [x] Ambient particle effects and atmospheric background
+- [x] Auto-refresh with visible countdown timer (5 min cycle)
+- [x] Source history sparklines in the detail panel
+- [x] Garden beds — cluster plants by source category (third view mode)
+- [x] Full accessibility pass (skip link, focus-visible, reduced motion, ARIA meters)
+- [x] Offline / service worker + PWA manifest
+- [x] Virtualized rendering with IntersectionObserver for large data sets
+- [x] Deep-linking — filters, view mode, and selected source synced to URL params
+- [x] Tests — Vitest suite covering utils, data derivation, state-map, filters, sparklines
+- [x] Error categorization and remediation hints in the detail panel
+- [x] CI validation — tests, JSON schema check, HTML lint in deploy workflow
 - [ ] Time slider — watch the garden degrade and recover across hours/days
 - [ ] Storm mode — widespread failures affect the whole garden environment
-- [ ] Garden beds — cluster plants by source category
 - [ ] Ambient effects — drifting spores, fog, moonlight changes
-- [ ] Trend sparklines in the detail panel
 - [ ] Watchlist / pinned plants
-- [ ] Source history timeline
 - [ ] JSON snapshot export/import
-- [ ] Full accessibility pass (contrast, reduced motion, keyboard nav)
 - [ ] Live WebSocket feed adapter
 
 ---

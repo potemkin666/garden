@@ -7,9 +7,13 @@
     <meta name="description" content="Signal Garden — a visual source-health dashboard where live feeds grow as plants." />
     <title>Signal Garden</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🌿</text></svg>" />
+    <link rel="manifest" href="manifest.json" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+
+    <!-- ── Skip to content link ────────────────────────────────────────────── -->
+    <a href="#garden-main" class="skip-link">Skip to main content</a>
 
     <!-- ── Ambient particle layer ──────────────────────────────────────────── -->
     <canvas id="ambient-canvas" class="ambient-canvas" aria-hidden="true"></canvas>
@@ -25,6 +29,10 @@
       </div>
       <div class="header-right">
         <div class="header-summary" id="status-summary" aria-live="polite"></div>
+        <div class="refresh-indicator" id="refresh-indicator" aria-live="polite" title="Auto-refresh countdown">
+          <span class="refresh-icon" aria-hidden="true">↻</span>
+          <span class="refresh-text" id="refresh-text"></span>
+        </div>
         <div class="header-actions" id="header-actions">
           <button class="action-btn" id="add-source-btn" title="Add new source">+ Add Source</button>
           <button class="action-btn action-btn-dim" id="export-btn" title="Export all sources as JSON">↓ Export</button>
@@ -70,5 +78,11 @@
     </footer>
 
     <script type="module" src="app.js"></script>
+    <script>
+      // Register service worker for offline support (PWA)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+    </script>
   </body>
 </html>
